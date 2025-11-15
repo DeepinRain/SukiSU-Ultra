@@ -235,8 +235,10 @@ static inline bool check_syscall_fastpath(int nr)
     case __NR_execve:
     case __NR_setresuid:
     case __NR_clone:
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 0)
     case __NR_clone3:
         return true;
+#endif
     default:
         return false;
     }

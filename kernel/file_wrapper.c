@@ -254,7 +254,7 @@ static ssize_t ksu_wrapper_copy_file_range(struct file *f1, loff_t off1, struct 
 	return -EINVAL;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 static loff_t ksu_wrapper_remap_file_range(struct file *file_in, loff_t pos_in,
 				struct file *file_out, loff_t pos_out,
 				loff_t len, unsigned int remap_flags) {
@@ -279,7 +279,7 @@ static int ksu_wrapper_fadvise(struct file *fp, loff_t off1, loff_t off2, int fl
 static int ksu_wrapper_clone_file_range(struct file *file_in, loff_t pos_in,
 				struct file *file_out, loff_t pos_out, u64 len) {
 	// TODO: determine which file to use
-	struct ksu_file_proxy* data = file_in->private_data;
+	struct ksu_file_wrapper* data = file_in->private_data;
 	struct file* orig = data->orig;
 	if (orig->f_op->clone_file_range) {
 		return orig->f_op->clone_file_range(orig, pos_in, file_out, pos_out, len);
@@ -287,10 +287,10 @@ static int ksu_wrapper_clone_file_range(struct file *file_in, loff_t pos_in,
 	return -EINVAL;
 }
 
-static ssize_t ksu_wrapper_dedupe_file_range(struct file *src_file, u64 loff,
-				u64 len, struct file *dst_file, u64 dst_loff) {
+static int ksu_wrapper_dedupe_file_range(struct file *src_file, loff_t loff,
+    			struct file *dst_file, loff_t dst_loff, u64 len) {
 	// TODO: determine which file to use
-	struct ksu_file_proxy* data = src_file->private_data;
+	struct ksu_file_wrapper* data = src_file->private_data;
 	struct file* orig = data->orig;
 	if (orig->f_op->dedupe_file_range) {
 		return orig->f_op->dedupe_file_range(orig, loff, len, dst_file, dst_loff);
@@ -353,7 +353,7 @@ struct ksu_file_wrapper* ksu_create_file_wrapper(struct file* fp) {
 	p->ops.fallocate = fp->f_op->fallocate ? ksu_wrapper_fallocate : NULL;
 	p->ops.show_fdinfo = fp->f_op->show_fdinfo ? ksu_wrapper_show_fdinfo : NULL;
 	p->ops.copy_file_range = fp->f_op->copy_file_range ? ksu_wrapper_copy_file_range : NULL;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 	p->ops.remap_file_range = fp->f_op->remap_file_range ? ksu_wrapper_remap_file_range : NULL;
 	p->ops.fadvise = fp->f_op->fadvise ? ksu_wrapper_fadvise : NULL;
 #else

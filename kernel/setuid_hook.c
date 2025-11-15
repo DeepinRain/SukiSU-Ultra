@@ -147,7 +147,11 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
             if (!is_ksu_domain()) {
                 pr_warn("find suspicious EoP: %d %s, from %d to %d\n", 
                     current->pid, current->comm, old_uid, new_uid);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
                 force_sig(SIGKILL);
+#else
+                force_sig(SIGKILL, current);
+#endif
                 return 0;
             }
         }
@@ -156,7 +160,11 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
             if (euid < current_euid().val && !ksu_is_allow_uid_for_current(old_uid)) {
                 pr_warn("find suspicious EoP: %d %s, from %d to %d\n", 
                     current->pid, current->comm, old_uid, new_uid);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
                 force_sig(SIGKILL);
+#else
+                force_sig(SIGKILL, current);
+#endif
                 return 0;
             }
         }
@@ -227,7 +235,11 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid){
             if (!is_ksu_domain()) {
                 pr_warn("find suspicious EoP: %d %s, from %d to %d\n", 
                     current->pid, current->comm, old_uid, new_uid);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
                 force_sig(SIGKILL);
+#else
+                force_sig(SIGKILL, current);
+#endif
                 return 0;
             }
         }
@@ -236,7 +248,11 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid){
             if (euid < current_euid().val && !ksu_is_allow_uid_for_current(old_uid)) {
                 pr_warn("find suspicious EoP: %d %s, from %d to %d\n", 
                     current->pid, current->comm, old_uid, new_uid);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
                 force_sig(SIGKILL);
+#else
+                force_sig(SIGKILL, current);
+#endif
                 return 0;
             }
         }
@@ -253,6 +269,8 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid){
         goto do_umount;
     }
 
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
     // - Since ksu maanger app uid is excluded in allow_list_arr, so ksu_uid_should_umount(manager_uid)
     //   will always return true, that's why we need to explicitly check if new_uid belongs to
     //   ksu manager
@@ -264,6 +282,7 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid){
         spin_unlock_irq(&current->sighand->siglock);
         return 0;
     }
+#endif
 
     // Check if spawned process is normal user app and needs to be umounted
     if (likely(is_zygote_normal_app_uid(new_uid) && ksu_uid_should_umount(new_uid))) {
@@ -275,6 +294,7 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid){
         goto do_umount;
     }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
     if (ksu_is_allow_uid_for_current(new_uid)) {
         if (current->seccomp.mode == SECCOMP_MODE_FILTER &&
             current->seccomp.filter) {
@@ -283,6 +303,21 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid){
             spin_unlock_irq(&current->sighand->siglock);
         }
     }
+#else
+    if (ksu_is_allow_uid_for_current(new_uid)) {
+		spin_lock_irq(&current->sighand->siglock);
+		disable_seccomp();
+		spin_unlock_irq(&current->sighand->siglock);
+
+		if (ksu_get_manager_uid() == new_uid) {
+			pr_info("install fd for ksu manager(uid=%d)\n",
+				new_uid);
+			ksu_install_fd();
+		}
+
+		return 0;
+	}
+#endif
 
     return 0;
 

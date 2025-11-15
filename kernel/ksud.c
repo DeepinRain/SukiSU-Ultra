@@ -33,6 +33,7 @@
 #include "klog.h" // IWYU pragma: keep
 #include "ksud.h"
 #include "selinux/selinux.h"
+
 #ifndef CONFIG_KSU_SUSFS
 #include "syscall_hook_manager.h"
 #endif // #ifndef CONFIG_KSU_SUSFS
@@ -341,10 +342,16 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
         rcu_read_lock();
         init_task = rcu_dereference(current->real_parent);
         if (init_task) {
-            task_work_add(init_task, &on_post_fs_data_cb, TWA_RESUME);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
+        task_work_add(init_task, &on_post_fs_data_cb, true);
+#else
+        task_work_add(init_task, &on_post_fs_data_cb, TWA_RESUME);
+#endif
         }
         rcu_read_unlock();
+#ifndef CONFIG_KSU_SUSFS
         ksu_set_task_tracepoint_flag(current); // we are zygote!
+#endif // #ifndef CONFIG_KSU_SUSFS
 
         stop_execve_hook();
     }
