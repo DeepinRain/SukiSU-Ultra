@@ -113,6 +113,7 @@ void kernelsu_exit(void)
     ksu_ksud_exit();
 #endif
 
+#ifndef CONFIG_KSU_SUSFS
     ksu_syscall_hook_manager_exit();
 #endif
 
