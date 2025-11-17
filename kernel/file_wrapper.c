@@ -287,8 +287,7 @@ static int ksu_wrapper_clone_file_range(struct file *file_in, loff_t pos_in,
 	return -EINVAL;
 }
 
-static int ksu_wrapper_dedupe_file_range(struct file *src_file, loff_t loff,
-    			struct file *dst_file, loff_t dst_loff, u64 len) {
+static ssize_t ksu_wrapper_dedupe_file_range(struct file *src_file, u64 loff, u64 len, struct file *dst_file, u64 dst_loff) {
 	// TODO: determine which file to use
 	struct ksu_file_wrapper* data = src_file->private_data;
 	struct file* orig = data->orig;

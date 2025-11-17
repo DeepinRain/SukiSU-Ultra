@@ -97,7 +97,7 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 
     char path[sizeof(su) + 1];
     memset(path, 0, sizeof(path));
-    strncpy_from_user_nofault(path, *filename_user, sizeof(path));
+    ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
 
     if (unlikely(!memcmp(path, su, sizeof(su)))) {
 #if __SULOG_GATE
@@ -144,7 +144,7 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
     pr_info("vfs_statx su->sh!\n");
     memcpy((void *)filename->name, sh, sizeof(sh));
 #else
-    strncpy_from_user_nofault(path, *filename_user, sizeof(path));
+    ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
 
     if (unlikely(!memcmp(path, su, sizeof(su)))) {
 #if __SULOG_GATE
@@ -174,7 +174,7 @@ int ksu_handle_execve_sucompat(const char __user **filename_user,
         return 0;
 
     memset(path, 0, sizeof(path));
-    strncpy_from_user_nofault(path, *filename_user, sizeof(path));
+    ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
 
     if (likely(memcmp(path, su, sizeof(su))))
         return 0;
@@ -248,7 +248,7 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 {
     char path[sizeof(su_path) + 1] = {0};
 
-    strncpy_from_user_nofault(path, *filename_user, sizeof(path));
+    ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
 
     if (unlikely(!memcmp(path, su_path, sizeof(su_path)))) {
         pr_info("faccessat su->sh!\n");
@@ -299,7 +299,7 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
     pr_info("ksu_handle_stat: su->sh!\n");
     memcpy((void *)filename->name, sh_path, sizeof(sh_path));
 #else
-    strncpy_from_user_nofault(path, *filename_user, sizeof(path));
+    ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
 
     if (unlikely(!memcmp(path, su_path, sizeof(su_path)))) {
         pr_info("ksu_handle_stat: su->sh!\n");
@@ -327,7 +327,11 @@ int ksu_handle_devpts(struct inode *inode)
                 return 0;
 
         if (ksu_file_sid) {
-                struct inode_security_struct *sec = selinux_inode(inode);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
+		        struct inode_security_struct *sec = selinux_inode(inode);
+#else
+		        struct inode_security_struct *sec = (struct inode_security_struct *)inode->i_security;
+#endif
                 if (sec) {
                         sec->sid = ksu_file_sid;
                 }
