@@ -40,6 +40,10 @@
 #endif
 
 #ifdef CONFIG_KSU_SUSFS
+
+#include <linux/namei.h>
+#include <linux/susfs.h>
+
 bool susfs_is_boot_completed_triggered = false;
 
 extern bool susfs_is_umount_for_zygote_system_process_enabled;
@@ -465,6 +469,8 @@ static int do_get_wrapper_fd(void __user *arg) {
     struct file* pf = fget(ret);
 
     struct inode* wrapper_inode = file_inode(pf);
+    // copy original inode mode
+    wrapper_inode->i_mode = file_inode(f)->i_mode;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
 	struct inode_security_struct *sec = selinux_inode(wrapper_inode);
 #else
@@ -591,9 +597,11 @@ static int do_get_hook_type(void __user *arg)
 {
     struct ksu_hook_type_cmd cmd = {0};
     const char *type = "Tracepoint";
-
+    
 #if defined(KSU_MANUAL_HOOK)
     type = "Manual";
+#elif defined(CONFIG_KSU_SUSFS)
+    type = "Inline";
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)

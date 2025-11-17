@@ -8,10 +8,8 @@
 #include <linux/string.h>
 #include <linux/kernel.h>
 #include <linux/uidgid.h>
-
-
 #include "kernel_compat.h"
-
+#include "ksu.h"
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4, 10, 0) && defined(CONFIG_KSU_MANUAL_SU)
 #include "manual_su.h"

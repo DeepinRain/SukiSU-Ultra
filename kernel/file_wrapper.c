@@ -287,7 +287,12 @@ static int ksu_wrapper_clone_file_range(struct file *file_in, loff_t pos_in,
 	return -EINVAL;
 }
 
-static ssize_t ksu_wrapper_dedupe_file_range(struct file *src_file, u64 loff, u64 len, struct file *dst_file, u64 dst_loff) {
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 14, 0)
+static ssize_t ksu_wrapper_dedupe_file_range(struct file *src_file, u64 loff, u64 len, struct file *dst_file, u64 dst_loff)
+#else
+static int ksu_wrapper_dedupe_file_range(struct file *src_file, loff_t loff, struct file *dst_file, loff_t dst_loff, u64 len)
+#endif // When ksu_wrapper_dedupe_file_range older than 4.14
+{
 	// TODO: determine which file to use
 	struct ksu_file_wrapper* data = src_file->private_data;
 	struct file* orig = data->orig;
@@ -296,6 +301,7 @@ static ssize_t ksu_wrapper_dedupe_file_range(struct file *src_file, u64 loff, u6
 	}
 	return -EINVAL;
 }
+
 #endif
 
 static int ksu_wrapper_release(struct inode *inode, struct file *filp) {

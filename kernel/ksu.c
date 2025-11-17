@@ -12,6 +12,7 @@
 #endif
 
 #include "allowlist.h"
+#include "ksu.h"
 #include "feature.h"
 #include "klog.h" // IWYU pragma: keep
 #include "throne_tracker.h"
@@ -110,6 +111,7 @@ void kernelsu_exit(void)
 
 #if defined(CONFIG_KPROBES) && !defined(CONFIG_KSU_SUSFS)
     ksu_ksud_exit();
+#endif
 
     ksu_syscall_hook_manager_exit();
 #endif

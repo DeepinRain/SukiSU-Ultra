@@ -49,6 +49,7 @@ config KSU_MANUAL_HOOK
       If enabled, Hook required KernelSU syscalls with manually-patched function.
 
 menu "KernelSU - SUSFS"
+
 config KSU_SUSFS
 	bool "KernelSU addon - SUSFS"
 	depends on KSU
@@ -171,6 +172,10 @@ config KSU_SUSFS_SUS_MAP
 		- It does NOT hide any inline hooks or plt hooks cause by the injected library itself.
 		- It may not be able to evade detections by apps that implement a good injection detection.
 		- Effective only on zygote spawned umounted user app process.
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/susfs-main
 endmenu
 
 endmenu

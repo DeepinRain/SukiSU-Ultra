@@ -38,6 +38,8 @@
 #include "syscall_hook_manager.h"
 #endif // #ifndef CONFIG_KSU_SUSFS
 
+#include "throne_tracker.h"
+
 bool ksu_module_mounted __read_mostly = false;
 bool ksu_boot_completed __read_mostly = false;
 
@@ -93,10 +95,12 @@ void on_post_fs_data(void)
     done = true;
     pr_info("on_post_fs_data!\n");
     ksu_load_allow_list();
+
 #ifndef CONFIG_KSU_SUSFS
     pr_info("mark tif for running process\n");
     ksu_mark_running_process();
 #endif // #ifndef CONFIG_KSU_SUSFS
+
     ksu_observer_init();
     // sanity check, this may influence the performance
     stop_input_hook();
@@ -147,6 +151,7 @@ void on_boot_completed(void){
     ksu_unmark_all_process();
     ksu_mark_running_process();
 #endif // #ifndef CONFIG_KSU_SUSFS
+    track_throne(true);
 }
 
 #ifndef CONFIG_KSU_SUSFS
@@ -352,7 +357,6 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 #ifndef CONFIG_KSU_SUSFS
         ksu_set_task_tracepoint_flag(current); // we are zygote!
 #endif // #ifndef CONFIG_KSU_SUSFS
-
         stop_execve_hook();
     }
 

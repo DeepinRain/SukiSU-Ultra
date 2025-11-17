@@ -244,7 +244,7 @@ static inline bool check_syscall_fastpath(int nr)
     }
 }
 
-// Unmark init's child that are not zygote or adbd
+// Unmark init's child that are not zygote, adbd or ksud
 int ksu_handle_init_mark_tracker(const char __user **filename_user)
 {
     char path[64];
@@ -255,34 +255,35 @@ int ksu_handle_init_mark_tracker(const char __user **filename_user)
     memset(path, 0, sizeof(path));
     strncpy_from_user_nofault(path, *filename_user, sizeof(path));
 
-    if (likely(strstr(path, "/app_process") == NULL && strstr(path, "/adbd") == NULL)) {
+    if (likely(strstr(path, "/app_process") == NULL && strstr(path, "/adbd") == NULL && strstr(path, "/ksud") == NULL)) {
+		pr_info("hook_manager: unmark %d exec %s", current->pid, path);
         ksu_clear_task_tracepoint_flag_if_needed(current);
     }
 
     return 0;
 }
-#ifdef CONFIG_KSU_MANUAL_SU
-#include "manual_su.h"
-static inline void ksu_handle_task_alloc(struct pt_regs *regs)
-{
-    ksu_try_escalate_for_uid(current_uid().val);
-}
-#endif
 
 #ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
 // Generic sys_enter handler that dispatches to specific handlers
 static void ksu_sys_enter_handler(void *data, struct pt_regs *regs, long id)
 {
 	if (unlikely(check_syscall_fastpath(id))) {
+#ifndef CONFIG_KSU_SUSFS
 #ifdef KSU_TP_HOOK
 		if (ksu_su_compat_enabled) {
 			// Handle newfstatat
 			if (id == __NR_newfstatat) {
 				int *dfd = (int *)&PT_REGS_PARM1(regs);
-				const char __user **filename_user =
-					(const char __user **)&PT_REGS_PARM2(regs);
 				int *flags = (int *)&PT_REGS_SYSCALL_PARM4(regs);
-				ksu_handle_stat(dfd, filename_user, flags);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0) && defined(CONFIG_KSU_SUSFS)
+					// Kernel 6.1+ with SUSFS uses struct filename **
+					struct filename **filename_ptr = (struct filename **)&PT_REGS_PARM2(regs);
+					ksu_handle_stat(dfd, filename_ptr, flags);
+#else
+					// Older kernel or no SUSFS: use const char __user **
+					const char __user **filename_user = (const char __user **)&PT_REGS_PARM2(regs);
+					ksu_handle_stat(dfd, filename_user, flags);
+#endif
 				return;
 			}
 
@@ -318,11 +319,6 @@ static void ksu_sys_enter_handler(void *data, struct pt_regs *regs, long id)
 			ksu_handle_setresuid(ruid, euid, suid);
 			return;
 		}
-
-#ifdef CONFIG_KSU_MANUAL_SU
-		// Handle task_alloc via clone/fork
-    	if (id == __NR_clone || id == __NR_clone3)
-        	return ksu_handle_task_alloc(regs);
 #endif
 	}
 }
@@ -330,6 +326,7 @@ static void ksu_sys_enter_handler(void *data, struct pt_regs *regs, long id)
 
 void ksu_syscall_hook_manager_init(void)
 {
+#if defined(CONFIG_KPROBES) && !defined(CONFIG_KSU_SUSFS)
 	int ret;
 	pr_info("hook_manager: ksu_hook_manager_init called\n");
 
@@ -351,6 +348,7 @@ void ksu_syscall_hook_manager_init(void)
 		pr_info("hook_manager: sys_enter tracepoint registered\n");
 	}
 #endif
+#endif
 
 	ksu_setuid_hook_init();
 	ksu_sucompat_init();
@@ -358,6 +356,7 @@ void ksu_syscall_hook_manager_init(void)
 
 void ksu_syscall_hook_manager_exit(void)
 {
+#if defined(CONFIG_KPROBES) && !defined(CONFIG_KSU_SUSFS)
 	pr_info("hook_manager: ksu_hook_manager_exit called\n");
 #ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
 	unregister_trace_sys_enter(ksu_sys_enter_handler, NULL);
@@ -368,6 +367,7 @@ void ksu_syscall_hook_manager_exit(void)
 #ifdef CONFIG_KRETPROBES
 	destroy_kretprobe(&syscall_regfunc_rp);
 	destroy_kretprobe(&syscall_unregfunc_rp);
+#endif
 #endif
 
 	ksu_sucompat_exit();
