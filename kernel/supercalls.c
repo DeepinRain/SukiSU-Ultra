@@ -633,6 +633,47 @@ static int do_enable_kpm(void __user *arg)
     return 0;
 }
 
+// 102. GET_VERSION_TAG - Get version tag (KernelSU-Next Compatibility)
+static int do_get_version_tag(void __user *arg)
+{
+	struct ksu_get_version_tag_cmd cmd;
+
+	strscpy(cmd.tag, KERNEL_SU_NEXT_VERSION_TAG, sizeof(cmd.tag));
+
+	if (copy_to_user(arg, &cmd, sizeof(cmd))) {
+		pr_err("get_version_tag: copy_to_user failed\n");
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+// 103. GET_HOOK_MODE - Get hook mode (KernelSU-Next Compatibility)
+static int do_get_hook_mode(void __user *arg)
+{
+    struct ksu_get_hook_mode_cmd cmd;
+    const char *type = "Tracepoint";
+
+#if defined(KSU_MANUAL_HOOK)
+    type = "Manual";
+#elif defined(CONFIG_KSU_SUSFS)
+    type = "Inline";
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+    strscpy(cmd.mode, type, sizeof(cmd.mode));
+#else
+    strlcpy(cmd.mode, type, sizeof(cmd.mode));
+#endif
+
+    if (copy_to_user(arg, &cmd, sizeof(cmd))) {
+        pr_err("get_hook_type: copy_to_user failed\n");
+        return -EFAULT;
+    }
+
+    return 0;
+}
+
 static int do_dynamic_manager(void __user *arg)
 {
     struct ksu_dynamic_manager_cmd cmd;
@@ -799,6 +840,9 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
     { .cmd = KSU_IOCTL_DYNAMIC_MANAGER, .name = "SET_DYNAMIC_MANAGER", .handler = do_dynamic_manager, .perm_check = manager_or_root},
     { .cmd = KSU_IOCTL_GET_MANAGERS, .name = "GET_MANAGERS", .handler = do_get_managers, .perm_check = manager_or_root},
     { .cmd = KSU_IOCTL_ENABLE_UID_SCANNER, .name = "SET_ENABLE_UID_SCANNER", .handler = do_enable_uid_scanner, .perm_check = manager_or_root},
+// KernelSU-Next Compatibility
+    { .cmd = KSU_IOCTL_GET_VERSION_TAG, .name = "GET_VERSION_TAG", .handler = do_get_version_tag, .perm_check = manager_or_root },
+    { .cmd = KSU_IOCTL_GET_HOOK_MODE, .name = "GET_HOOK_MODE", .handler = do_get_hook_mode, .perm_check = manager_or_root },
 #ifdef CONFIG_KSU_MANUAL_SU
     { .cmd = KSU_IOCTL_MANUAL_SU, .name = "MANUAL_SU", .handler = do_manual_su, .perm_check = system_uid_check},
 #endif

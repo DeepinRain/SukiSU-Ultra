@@ -93,6 +93,9 @@ endif
 ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
 ccflags-y += -DKSU_VERSION_FULL=\"$(KSU_VERSION_FULL)\"
 
+# KernelSU-Next version tag
+ccflags-y += -DKSU_NEXT_VERSION_TAG=\"v3.0.0\"
+
 ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
 ccflags-y += -DKSU_MANUAL_HOOK
 $(info -- SukiSU: KSU_MANUAL_HOOK)

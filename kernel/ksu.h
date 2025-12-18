@@ -19,6 +19,8 @@ extern bool ksu_uid_scanner_enabled;
 #endif
 #define KSU_FULL_VERSION_STRING 255
 
+#define KERNEL_SU_NEXT_VERSION_TAG KSU_NEXT_VERSION_TAG
+
 #define DYNAMIC_MANAGER_OP_SET 0
 #define DYNAMIC_MANAGER_OP_GET 1
 #define DYNAMIC_MANAGER_OP_CLEAR 2

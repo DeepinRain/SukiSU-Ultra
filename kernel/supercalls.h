@@ -107,6 +107,14 @@ struct ksu_enable_kpm_cmd {
     __u8 enabled; // Output: true if KPM is enabled
 };
 
+struct ksu_get_hook_mode_cmd {
+	char mode[32];
+};
+
+struct ksu_get_version_tag_cmd {
+	char tag[32];
+};
+
 struct ksu_dynamic_manager_cmd {
     struct dynamic_manager_user_config config; // Input/Output: dynamic manager config
 };
